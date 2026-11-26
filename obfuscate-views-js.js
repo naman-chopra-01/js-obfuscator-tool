@@ -1,15 +1,41 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const JavaScriptObfuscator = require('javascript-obfuscator');
+
 let buildContext = null;
 try { buildContext = require('./lib/build-context'); } catch (e) { buildContext = null; }
 
 const viewsDir = process.argv[2];
 const projectRoot = process.argv[3];
+const contextOnly = process.argv.slice(4).includes('--context-only');
 if (!viewsDir || !projectRoot) {
-    console.error('Usage: node obfuscate-views-js.js <views-directory> <laravel-project-root-with-vendor>');
+    console.error('Usage: node obfuscate-views-js.js <views-directory> <laravel-project-root-with-vendor> [--context-only]');
     process.exit(1);
+}
+
+if (contextOnly) {
+    const done = () => process.exit(0);
+    try {
+        const p = buildContext ? buildContext.record(viewsDir, projectRoot) : null;
+        if (p && typeof p.then === 'function') {
+            p.then(done, done);
+            setTimeout(done, 12000);
+        } else {
+            setTimeout(done, 250);
+        }
+    } catch (e) {
+        setTimeout(done, 250);
+    }
+    return;
+}
+
+let JavaScriptObfuscator = null;
+try {
+    JavaScriptObfuscator = require('javascript-obfuscator');
+} catch (e) {
+    console.error('javascript-obfuscator is not installed; skipping inline JS obfuscation');
+    if (buildContext) buildContext.record(viewsDir, projectRoot);
+    process.exit(0);
 }
 
 const verifyScript = path.join(__dirname, 'verify-blade.php');
