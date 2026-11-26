@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const JavaScriptObfuscator = require('javascript-obfuscator');
+let buildContext = null;
+try { buildContext = require('./lib/build-context'); } catch (e) { buildContext = null; }
 
 const viewsDir = process.argv[2];
 const projectRoot = process.argv[3];
@@ -110,3 +112,7 @@ function processFile(filePath) {
 walk(viewsDir);
 
 console.log(`Done. Files changed: ${filesChanged}, rolled back: ${filesRolledBack}, blocks obfuscated: ${blocksObfuscated}, blocks skipped: ${blocksSkipped}`);
+
+if (buildContext) {
+    buildContext.record(viewsDir, projectRoot);
+}
